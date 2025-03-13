@@ -1,6 +1,7 @@
 import React, { useState,useEffect } from 'react';
 import Papa from 'papaparse'
 import Swal from 'sweetalert2';
+import Loader from "../components/Loader";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 import rankData from '../assets/ranking.csv'
@@ -10,11 +11,12 @@ const Compare = () => {
     const[data,setData]=useState([])
     const [question, setQuestion] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    
+
+    var retry=0;
+    var isError = false;
 
     const handleQuery = async () => {
       setIsLoading(true);
-      
       try {
         const response = await fetch("http://localhost:5100/get_stock_info", {
           method: "POST",
@@ -30,29 +32,42 @@ const Compare = () => {
   
         const data = await response.json();
         console.log(data)
-  
+        isError = false;
+        
       } catch (error) {
+        retry++
+        if(retry<5)
+          handleQuery()
         console.error("Error querying server:", error);
+        isError = true;
       } finally {
-        setIsLoading(false);
+        if(isError && retry>5)
+          setIsLoading(false);
+        if(!isError)
+          setIsLoading(false);
       }
   
     };
-
+    
     useEffect(() => {
-        const fetchParseData = async () => {
-            Papa.parse(rankData,{
-                download:true,
-                delimiter:",",
-                header:true,
-                complete:((result) => {
-                    setData(result.data)
-                    console.log(result.data)
-                })
-            })
-        }
-        fetchParseData()
-    }, [])
+      const fetchParseData = async () => {
+        Papa.parse(rankData, {
+          download: true,
+          delimiter: ",",
+          header: true,
+          skipEmptyLines: true,
+          complete: (result) => {
+            const filteredData = result.data.filter(row => 
+              row["PE Score"] !== undefined && row["PE Score"] !== ''
+            );
+            setData(filteredData);
+            console.log(filteredData);
+          }
+        });
+      };
+  
+      fetchParseData();
+    }, []);
     
     const handleExplanation = (exp1, exp2, exp3, exp4, exp5, exp6) => {
         const explanationText = `
@@ -84,8 +99,11 @@ const Compare = () => {
         <>
         
         <Navbar/>
-
-        <div className="flex justify-center pt-[100px] gap-10">
+        {isLoading ? (
+        <Loader />
+        ) : (
+          <>
+        <div className="flex justify-center my-[100px] mt-[93px] gap-10">
               <input
                 className="rounded-lg outline outline-4 outline-blue-700 border-0 bg-gray-300 focus:bg-white outline-offset-3 p-3 w-[600px] transition duration-300"
                 type="text"
@@ -103,7 +121,9 @@ const Compare = () => {
         <div className='w-screen flex pb-[70px] justify-center'>
 
         <div className="my-8 w-4/5">
+
          <table className="w-full border border-gray-600 rounded-lg shadow-lg">
+
             <thead className="bg-gray-200">
               <tr>
                 <th rowSpan="2" className="px-[20px] py-[15px] border border-gray-500 text-center">Ticker Code</th>
@@ -123,8 +143,9 @@ const Compare = () => {
                 <th className="px-[20px] py-[15px] border border-gray-500 text-center">Business Strategy</th>
               </tr>
             </thead>
+
             <tbody>
-              {data.slice(0, -1).map((row, rowIndex) => (
+              {data.slice(0).map((row, rowIndex) => (
                 <tr key={rowIndex} className={`bg-white ${rowIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
                   <td className="px-[20px] py-[15px] border border-gray-500">{row['Ticker']}</td>
                   <td className="px-[20px] py-[15px] border border-gray-500 text-center">{row['PE Score']}</td>
@@ -134,7 +155,7 @@ const Compare = () => {
                   <td className="px-[20px] py-[15px] border border-gray-500 text-center">{row['Revenue Score']}</td>
                   <td className="px-[20px] py-[15px] border border-gray-500 text-center">{row['News Sentiment Score']}</td>
                   <td className="px-[20px] py-[15px] border border-gray-500 text-center">{row['MD & A Score']}</td>
-                  <td className="px-[20px] py-[15px] border border-gray-500 text-center">{row['Strategic score']}</td>
+                  <td className="px-[20px] py-[15px] border border-gray-500 text-center">{parseFloat(row['Strategic score'])>5 ? 5:row['Strategic score']}</td>
                   <td className="px-[20px] py-[15px] border border-gray-500 text-center">
                     {parseFloat(row['PE Score'] || 0) + 
                     parseFloat(row['Industry PE Score'] || 0) + 
@@ -143,7 +164,7 @@ const Compare = () => {
                     parseFloat(row['Revenue Score'] || 0) + 
                     parseFloat(row['News Sentiment Score'] || 0) + 
                     parseFloat(row['MD & A Score'] || 0) + 
-                    parseFloat(row['Strategic score'] || 0)}
+                    (parseFloat(row['Strategic score'] || 0)>5 ? 5:parseFloat(row['Strategic score'] || 0))}
                   </td>
                   <td className="p-3 border border-gray-300">
                     <button
@@ -159,9 +180,10 @@ const Compare = () => {
           </table>
         </div>
         </div>
+          </>
+        )}
 
         <Footer/>
-
         </>
     );
 }

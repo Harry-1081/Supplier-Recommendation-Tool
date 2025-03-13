@@ -10,9 +10,9 @@ function Navbar() {
       </div>
       <div className="flex items-center justify-end h-full pr-8">
         <a href="/home" className="text-black no-underline m-5 text-[24px] font-semibold">Home</a>
-        <a href="/about" className="text-black no-underline m-5 text-[24px] font-semibold">About Us</a>
         <a href="/query" className="text-black no-underline m-5 text-[24px] font-semibold">Query</a>
         <a href="/compare" className="text-black no-underline m-5 text-[24px] font-semibold">Compare</a>
+        <a href="/upload" className="text-black no-underline m-5 text-[24px] font-semibold">Upload</a>
       </div>
       {openLinks && (
         <div className="flex flex-col items-start ml-8 md:hidden">

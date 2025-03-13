@@ -18,8 +18,11 @@ const QueryComponent = () => {
   const [userInput, setUserInput] = useState('');
   const [isOpen, setIsOpen] = useState(false); 
 
+  var retry = 0;
+  var isError = false;
 
   const sendMessage = async () => {
+
       if (userInput.trim() === '') return;
 
       const userMessage = { sender: 'user-cb', text: userInput };
@@ -66,12 +69,20 @@ const QueryComponent = () => {
       console.log(data.news_titles.answer)
       setCname(data.company_name);
       setMetrics(data.metrics);
+      isError = false;
 
     } catch (error) {
       console.error("Error querying server:", error);
+      retry++
+      if(retry<5)
+        handleQuery()
       setSentiment("Error: Failed to query server.");
+      isError = true;
     } finally {
-      setIsLoading(false);
+      if(isError && retry>=5)
+        setIsLoading(false);
+      if(!isError)
+        setIsLoading(false);
     }
 
   };
